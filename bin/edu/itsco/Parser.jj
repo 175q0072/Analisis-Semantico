@@ -1,0 +1,232 @@
+/**
+ * JavaCC template file created by SF JavaCC plugin 1.5.28+ wizard for JavaCC 1.5.0+
+ */
+options
+{
+  LOOKAHEAD = 1;
+  static = true;
+}
+
+PARSER_BEGIN(Parser)
+package edu.itsco;
+
+public class Parser
+{
+  public static void main(String args []) throws ParseException
+  {
+    Parser parser = new Parser(System.in);
+   System.out.println ("bienvenidos al COMPILADOR");
+   System.out.println ("----------------------------------------------");
+   Parser.principal();
+   System.out.println ("EL PROGRAMA SE COMPILO CORRECTAMENTE");
+    
+  }
+}
+
+PARSER_END(Parser)
+
+SKIP :
+{
+  " "
+| "\r"
+| "\t"
+| "\n"
+}
+
+TOKEN: {
+  < INICIO : "program" >
+| < FIN : "end" >
+| < VAR : "var" >
+| < INT : "int" >
+| < STRING : "string" >
+| < FLOAT : "float" > 
+ 
+| < PRINT : "print" >
+| < INPUT : "input" > 
+ 
+| < IF : "if" >
+| < ENTONCES : ":" >
+| < ELSE : "else" > 
+
+| <SELECT: "select" >
+| < WHEN: "when">
+| < PREDETERMINADO: "default" >
+| < BREAK: "break" >
+
+| < FOR : "for" >
+| < IN : "in" >
+| < TO: "to" >
+| < NEXT: "next" >
+ 
+ 
+| < WHILE : "while" >
+| < DO : "do">  
+}
+TOKEN:{
+
+< SUM : "+" >
+| < REST : "-" >
+| < MULT : "*" >
+| < DIV : "/" >
+| < MOD : "%" >
+| < POT : "^" >
+| < IGUAL: "="> 
+ 
+| < MAYOR : ">" >
+| < MENOR : "<" > 
+ 
+| < AND : "&&" >
+| < OR : "||" >
+| < NOT : "!" > 
+ 
+| < AP: "(" >
+| < CP: ")" >
+| < AC: "[" >
+| < CC: "]"> 
+}
+TOKEN:{
+ <#digito: ["0"-"9"] >
+ | <#letra: ["a"-"z","A"-"Z"] > 
+
+ | <VALOR_INT: (<digito >)+ >
+ | <VALOR_FLOAT: (< digito >)+"."(< digito >)+ >
+ | <VALOR_STRING:("\'" (~["\'"])+ "\'") | ("\"" (~["\""])+ "\"") >  
+ 
+| <ID: ("_" | <letra >) ("_"|<letra >|<digito >)* >
+} 
+
+void principal (): {}
+{
+   <INICIO> <ID> 
+        sentencias()
+    <FIN> 
+}
+void sentencias():{
+}{
+    (   gramaticaImprimir()
+        |declararVariable()
+        |gramaticaLeer()
+        |gramaticaIf()
+        |gramaticaWhile()
+        |gramaticaAsignacion()
+        |gramaticaFor()
+        |gramaticaSelect()
+        |gramaticaDo()
+        
+    )+    
+}
+
+
+
+//Gramaticas
+
+void gramaticaImprimir(): { }
+{
+  <PRINT> <AP> ( valor()| <ID> )
+        (<SUM> (valor() | <ID>))*
+    <CP>
+} 
+
+
+void declararVariable(): { }
+{
+    < VAR >  <ID> TipoDato() [ <IGUAL > valor()] 
+}
+
+
+void gramaticaLeer():{
+}{
+    <INPUT> <AP> (<ID>|valor()) 
+           <CP>
+    
+}
+void gramaticaAsignacion():{
+}{
+    <ID> <IGUAL> operacion()
+}
+
+void gramaticaIf():{}
+{
+    <IF> <AP> condicion() <CP> <ENTONCES>
+        sentencias()
+    [<ELSE> sentencias()]
+    <FIN> <IF>
+}
+
+void gramaticaSelect(): { }
+{
+  < SELECT > <AP > <ID > <CP >
+  ( <WHEN > <VALOR_INT > <ENTONCES > sentencias() < BREAK > )*
+  [<PREDETERMINADO ><ENTONCES > sentencias() < BREAK>]
+  < FIN > < SELECT >
+}
+
+void gramaticaFor():{
+}{
+    <FOR> <ID> <IGUAL> <VALOR_INT> <TO> <VALOR_INT>  <ENTONCES >
+        sentencias()
+    <NEXT>
+}
+void gramaticaWhile(): { }
+{
+	< WHILE> <AP> condicion() <CP> <ENTONCES >
+        sentencias()
+    <FIN> <WHILE>
+}
+
+void gramaticaDo(): { }
+{
+  < DO > <ENTONCES >
+  sentencias()
+  < FIN >< WHILE > <AP > condicion()< CP >
+} 
+
+
+
+//cosas
+void TipoDato(): { }
+{
+  < INT > | < STRING > | < FLOAT >
+}
+
+void valor(): { }
+{
+  < VALOR_STRING > | < VALOR_INT > | < VALOR_FLOAT >
+}
+ 
+void operacion():{}
+{
+    ( valor() | <ID> | opParentesis() )
+    (opAritmetico() (valor() | <ID> | opParentesis()))*
+}
+       
+ void opParentesis():{
+}{
+    <AP> operacion() <CP>
+}
+
+void opAritmetico():{}
+{
+    <SUM> | <REST> | <MULT> | <DIV> | <MOD>
+}
+
+
+void condicion():{
+}{
+    condicionSimple() (opLogico() condicionSimple())* 
+}
+
+void opLogico():{
+}{
+    <AND> | <OR> |< NOT >
+}
+
+void condicionSimple():{
+}{
+   ( valor() | <ID> ) opRelacional() ( valor()|<ID> )
+}
+
+void opRelacional():{
+}{
+    <MAYOR>[<IGUAL>] | <MENOR>[<IGUAL>] | <IGUAL><IGUAL>
+}
