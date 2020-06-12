@@ -9,17 +9,58 @@ options
 
 PARSER_BEGIN(Parser)
 package edu.itsco;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Parser
 {
-  public static void main(String args []) throws ParseException
+  public static List<Variable> variables;
+  
+  public static void main(String args []) throws ParseException, SemanticException
   {
+    variables = new ArrayList<Variable>();
     Parser parser = new Parser(System.in);
    System.out.println ("bienvenidos al COMPILADOR");
    System.out.println ("----------------------------------------------");
    Parser.principal();
    System.out.println ("EL PROGRAMA SE COMPILO CORRECTAMENTE");
     
+  }
+
+    public static void addVariable(Variable v) throws
+    SemanticException{
+    if(!variables.contains(v)){
+        variables.add(v);
+    }else{
+        throw new SemanticException(v.getId(),
+            SemanticException.VARIABLE_DUPLICADA);
+    }
+  }
+
+  public static void variableExiste(Variable v) throws
+    SemanticException{
+     if(!variables.contains(v)){
+        throw new SemanticException(v.getId(),
+            SemanticException.VARIABLE_NO_DEFINIDA);
+     }
+  }
+
+  public static void tipoDeDato(Variable v, String tipoDato)
+  throws SemanticException{
+      Variable vBuscar = variables.get(variables.indexOf(v));
+      if(!vBuscar.getTipoDato().equals(tipoDato))
+        throw new SemanticException(v.getId(),
+            SemanticException.TIPOS_NO_COINCIDEN);
+  
+  }
+
+  public static void noInicializada(Variable v)
+   throws SemanticException {
+    Variable vBuscar = variables.get(variables.indexOf(v));
+    if(!vBuscar.isInicializada()) {
+		throw new SemanticException(v.getId(),
+		SemanticException.VARIABLE_NO_INICIALIZADA);
+      }
   }
 }
 
@@ -95,13 +136,13 @@ TOKEN:{
 | <ID: ("_" | <letra >) ("_"|<letra >|<digito >)* >
 } 
 
-void principal (): {}
+void principal () throws SemanticException: {}
 {
    <INICIO> <ID> 
         sentencias()
     <FIN> 
 }
-void sentencias():{
+void sentencias() throws SemanticException:{
 }{
     (   gramaticaImprimir()
         |declararVariable()
@@ -120,32 +161,71 @@ void sentencias():{
 
 //Gramaticas
 
-void gramaticaImprimir(): { }
+void gramaticaImprimir() throws SemanticException: {
+  Token id;}
 {
-  <PRINT> <AP> ( valor()| <ID> )
+  <PRINT> <AP> ( valor()| id= <ID> {
+		Variable v= new Variable();
+		v.setId(id.image);
+		variableExiste(v);
+		noInicializada(v);
+		
+    } )
         (<SUM> (valor() | <ID>))*
     <CP>
 } 
 
 
-void declararVariable(): { }
+void declararVariable() throws SemanticException: {
+  Token id;
+  String tipoDatoValor;
+  String tipoDatoVariable;
+ }
 {
-    < VAR >  <ID> TipoDato() [ <IGUAL > valor()] 
+    < VAR >  id= <ID> tipoDatoVariable= TipoDato() {
+			Variable v= new Variable();
+			v.setId(id.image);
+			v.setTipoDato(tipoDatoVariable);
+			addVariable(v);
+			}
+			
+        [ <IGUAL > tipoDatoValor=valor() {
+          	tipoDeDato(v, tipoDatoValor);
+			v.setInicializada(true);
+       }] 
 }
 
 
-void gramaticaLeer():{
+void gramaticaLeer() throws SemanticException:{
+  Token id;
+  String tipoDatoVariable;
 }{
-    <INPUT> <AP> (<ID>|valor()) 
+    <INPUT> <AP> (id=<ID>   {
+		Variable v= new Variable();
+		v.setId(id.image);
+		variableExiste(v);
+		
+     }|valor()) 
            <CP>
     
 }
-void gramaticaAsignacion():{
+void gramaticaAsignacion() throws SemanticException:{
+  Token id;
+  String tipoDatoOperacion="";
 }{
-    <ID> <IGUAL> operacion()
+   id= <ID> <IGUAL> tipoDatoOperacion=operacion()
+   {
+     Variable v=new Variable();
+     v.setId(id.image);
+     variableExiste(v);
+     tipoDeDato(v, tipoDatoOperacion);
+     variables.get(variables.indexOf(v)).setInicializada(true);
+
+    }
+   
 }
 
-void gramaticaIf():{}
+void gramaticaIf() throws SemanticException:{}
 {
     <IF> <AP> condicion() <CP> <ENTONCES>
         sentencias()
@@ -153,28 +233,41 @@ void gramaticaIf():{}
     <FIN> <IF>
 }
 
-void gramaticaSelect(): { }
+void gramaticaSelect() throws SemanticException: {
+  Token id;
+}
 {
-  < SELECT > <AP > <ID > <CP >
+  < SELECT > <AP > id=<ID > <CP >
   ( <WHEN > <VALOR_INT > <ENTONCES > sentencias() < BREAK > )*
   [<PREDETERMINADO ><ENTONCES > sentencias() < BREAK>]
   < FIN > < SELECT >
+  {
+    Variable v= new Variable();
+    v.setId(id.image);
+    variableExiste(v);
+    noInicializada(v);
+    if(v.getTipoDato()!="int") {
+		throw new SemanticException(v.getId(),
+            SemanticException.TIPOS_NO_COINCIDEN);
+      }
+    
+  }
 }
 
-void gramaticaFor():{
+void gramaticaFor() throws SemanticException:{
 }{
     <FOR> <ID> <IGUAL> <VALOR_INT> <TO> <VALOR_INT>  <ENTONCES >
         sentencias()
     <NEXT>
 }
-void gramaticaWhile(): { }
+void gramaticaWhile() throws SemanticException: { }
 {
 	< WHILE> <AP> condicion() <CP> <ENTONCES >
         sentencias()
     <FIN> <WHILE>
 }
 
-void gramaticaDo(): { }
+void gramaticaDo() throws SemanticException: { }
 {
   < DO > <ENTONCES >
   sentencias()
@@ -184,34 +277,76 @@ void gramaticaDo(): { }
 
 
 //cosas
-void TipoDato(): { }
+String TipoDato(): { }
 {
-  < INT > | < STRING > | < FLOAT >
+  < INT > {return "int"; } | < STRING >{return "string"; } | < FLOAT >{return "float"; }
+
 }
 
-void valor(): { }
+String valor(): { }
 {
-  < VALOR_STRING > | < VALOR_INT > | < VALOR_FLOAT >
+  < VALOR_STRING > {return "string"; } | < VALOR_INT > {return "int";}| < VALOR_FLOAT > { return "float";}
 }
  
-void operacion():{}
+String operacion() throws SemanticException:{
+	Token id1;
+	Token id2;
+	String tipoDatoResultado="";
+	String tipoDatoOp="";
+	Token operadorAritmetico;
+  }
 {
-    ( valor() | <ID> | opParentesis() )
-    (opAritmetico() (valor() | <ID> | opParentesis()))*
+    ( tipoDatoResultado = valor()
+    | id1=<ID> {
+		Variable v=new Variable();
+		v.setId(id1.image);
+		variableExiste(v);
+		noInicializada(v);
+		tipoDatoResultado=variables.get(variables.indexOf(v)).getTipoDato();
+      }
+    | tipoDatoResultado=opParentesis() )
+    
+    (operadorAritmetico= opAritmetico() (tipoDatoOp=valor()
+    | id2=<ID> {
+		Variable v = new Variable();
+		v.setId(id2.image);
+		variableExiste(v);
+		noInicializada(v);
+		tipoDatoOp=variables.get(variables.indexOf(v)).getTipoDato();
+      }
+    | tipoDatoOp=opParentesis())
+		{
+		  if(operadorAritmetico.image!="+" && tipoDatoResultado=="string" && tipoDatoOp=="string" ) {
+			throw new SemanticException("",
+            SemanticException.OPERACION_NO_VALIDA);
+		    }
+		   else if(tipoDatoResultado=="string" && tipoDatoOp!="string") {
+		     throw new SemanticException("",
+            SemanticException.OPERACION_NO_VALIDA);
+		     }
+		   else if(tipoDatoResultado!="string" && tipoDatoOp=="string") {
+		     throw new SemanticException("",
+            SemanticException.OPERACION_NO_VALIDA);
+		     }
+		}
+    )*
+    { return tipoDatoResultado;}
 }
        
- void opParentesis():{
+ String opParentesis() throws SemanticException:{
+   String tipoDatoResultado="";
 }{
-    <AP> operacion() <CP>
+    <AP> tipoDatoResultado=operacion() <CP>
+    { return tipoDatoResultado;}
 }
 
-void opAritmetico():{}
+Token opAritmetico():{Token op;}
 {
-    <SUM> | <REST> | <MULT> | <DIV> | <MOD>
+   op= <SUM> {return op; }| op=<REST> {return op; }|op=<MULT>{return op; } | op=<DIV> {return op; }|op= <MOD>{return op; }
 }
 
 
-void condicion():{
+void condicion() throws SemanticException:{
 }{
     condicionSimple() (opLogico() condicionSimple())* 
 }
@@ -221,9 +356,21 @@ void opLogico():{
     <AND> | <OR> |< NOT >
 }
 
-void condicionSimple():{
+void condicionSimple() throws SemanticException:{
+  Token id;
 }{
-   ( valor() | <ID> ) opRelacional() ( valor()|<ID> )
+   ( valor() | id=<ID> {
+		Variable v=new Variable();
+		v.setId(id.image);
+		variableExiste(v);
+		noInicializada(v);
+     }
+    ) opRelacional() ( valor()|id=<ID> {
+		Variable v=new Variable();
+		v.setId(id.image);
+		variableExiste(v);
+		noInicializada(v);
+     } )
 }
 
 void opRelacional():{
